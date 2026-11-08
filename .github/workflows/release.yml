@@ -143,13 +143,18 @@ jobs:
 
       - name: Build the release APK
         working-directory: rider-app/android
+        # chmod as a safety net: the executable bit is set in git, but a commit
+        # from a Windows checkout (core.fileMode=false) can drop it again, and
+        # the failure — "./gradlew: Permission denied" — is not obvious.
         env:
           MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
           RELEASE_STORE_FILE: ${{ steps.keystore.outputs.signed == 'true' && 'release.keystore' || '' }}
           RELEASE_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: ./gradlew assembleRelease --no-daemon --stacktrace
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Name the APK after the version
         run: |
