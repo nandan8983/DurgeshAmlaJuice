@@ -10,6 +10,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useLocation } from '../lib/location';
 import { useTodayRoute, type RouteStopView } from '../hooks/useRoute';
 import { SyncStatus } from '../components/SyncStatus';
+import { UpdateBanner } from '../components/UpdateBanner';
 import { StopCard } from '../components/StopCard';
 import { Banner, Button, Card, EmptyState, Pill } from '../components/ui';
 import { colors, productColor, productLabel, spacing } from '../theme';
@@ -36,6 +37,7 @@ export function RouteScreen({ navigation }: Props): React.JSX.Element {
         }
         ListHeaderComponent={
           <View style={styles.header}>
+            <UpdateBanner />
             <SyncStatus />
 
             {permission !== 'granted' ? (

@@ -5,26 +5,24 @@
  * map before saving. Only four fields are required; the admin completes the rest
  * later. Saving works offline: the customer is queued and created on sync.
  */
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE, type Region } from 'react-native-maps';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useLocation } from '../lib/location';
 import { createCustomer, createSubscription, fetchPlans } from '../api/endpoints';
 import { ApiError } from '../api/client';
 import { useQueueStore } from '../store/queue';
+import { LocationMapPicker } from '../components/LocationMapPicker';
 import { Banner, Button, Card, Field, Pill, styles as ui } from '../components/ui';
 import { colors, productColor, spacing } from '../theme';
 import type { RootStackParamList } from '../navigation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddCustomer'>;
 
-const SHIRPUR: Region = {
+const SHIRPUR = {
   latitude: 21.3486,
   longitude: 74.8805,
-  latitudeDelta: 0.02,
-  longitudeDelta: 0.02,
 };
 
 export function AddCustomerScreen({ navigation }: Props): React.JSX.Element {
@@ -42,6 +40,7 @@ export function AddCustomerScreen({ navigation }: Props): React.JSX.Element {
   const [landmark, setLandmark] = useState('');
   const [notes, setNotes] = useState('');
   const [pin, setPin] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [mapInteracting, setMapInteracting] = useState(false);
   const [planId, setPlanId] = useState<string | null>(null);
 
   // Drop the pin where the rider is standing, once a fix arrives.
@@ -53,11 +52,6 @@ export function AddCustomerScreen({ navigation }: Props): React.JSX.Element {
 
   const bottlesPerDay = Math.max(1, Math.min(50, Number.parseInt(bottles, 10) || 1));
   const canSave = name.trim().length >= 2 && mobile.replace(/\D/g, '').length >= 10;
-
-  const region: Region = useMemo(
-    () => (pin ? { ...SHIRPUR, latitude: pin.latitude, longitude: pin.longitude } : SHIRPUR),
-    [pin],
-  );
 
   const save = useMutation({
     mutationFn: async () => {
@@ -114,7 +108,11 @@ export function AddCustomerScreen({ navigation }: Props): React.JSX.Element {
   });
 
   return (
-    <ScrollView style={styles.flex} contentContainerStyle={styles.container}>
+    <ScrollView
+      style={styles.flex}
+      contentContainerStyle={styles.container}
+      scrollEnabled={!mapInteracting}
+      keyboardShouldPersistTaps="handled">
       {permission !== 'granted' ? (
         <Banner
           tone="warning"
@@ -175,24 +173,16 @@ export function AddCustomerScreen({ navigation }: Props): React.JSX.Element {
       <Card style={styles.spaced}>
         <Text style={styles.sectionTitle}>Home location</Text>
         <Text style={styles.hint}>
-          Drag the pin to the exact door. This is what the Navigate button uses.
+          Drag or tap the map to place the pin at the exact door. This is what the Navigate button uses.
         </Text>
 
         <View style={styles.mapWrapper}>
-          <MapView
-            style={styles.map}
-            provider={PROVIDER_GOOGLE}
-            region={region}
-            onPress={event => setPin(event.nativeEvent.coordinate)}>
-            {pin ? (
-              <Marker
-                coordinate={pin}
-                draggable
-                onDragEnd={event => setPin(event.nativeEvent.coordinate)}
-                title={name || 'New customer'}
-              />
-            ) : null}
-          </MapView>
+          <LocationMapPicker
+            pin={pin}
+            defaultCenter={coords ?? SHIRPUR}
+            onChange={setPin}
+            onInteractionChange={setMapInteracting}
+          />
         </View>
 
         <View style={styles.mapActions}>
@@ -209,7 +199,7 @@ export function AddCustomerScreen({ navigation }: Props): React.JSX.Element {
         <Text style={styles.coordText}>
           {pin
             ? `Pinned at ${pin.latitude.toFixed(5)}, ${pin.longitude.toFixed(5)}`
-            : 'No pin yet — the admin can add it later.'}
+            : 'No pin yet — drag or tap the map, or tap Use my location.'}
         </Text>
       </Card>
 

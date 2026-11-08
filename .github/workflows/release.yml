@@ -1,7 +1,7 @@
 # Push to main -> test, build, publish a GitHub Release with the artifacts.
 #
 # Produces, on every push to main that passes the tests:
-#   daj-rider-<version>.apk        the rider Android app, installable directly
+#   DAJ RiderApp.apk                the rider Android app, installable directly
 #   daj-admin-web-<version>.zip    the built admin dashboard, for any static host
 #   daj-backend-<version>.zip      the compiled API, for a host without a build step
 #
@@ -125,6 +125,14 @@ jobs:
         working-directory: rider-app
         run: npm ci
 
+      - name: Stamp version into JS bundle
+        working-directory: rider-app
+        run: |
+          cat > src/version.ts <<EOF
+          export const APP_VERSION = '${VERSION_NAME}';
+          export const APP_BUILD_NUMBER = ${VERSION_CODE};
+          EOF
+
       - id: keystore
         name: Decode the release keystore, if one is configured
         working-directory: rider-app/android/app
@@ -156,13 +164,13 @@ jobs:
           chmod +x ./gradlew
           ./gradlew assembleRelease --no-daemon --stacktrace
 
-      - name: Name the APK after the version
+      - name: Name the APK
         run: |
           set -euo pipefail
           SRC="rider-app/android/app/build/outputs/apk/release/app-release.apk"
           test -f "$SRC" || { echo "APK not found at $SRC"; ls -R rider-app/android/app/build/outputs || true; exit 1; }
           mkdir -p dist
-          cp "$SRC" "dist/daj-rider-${{ needs.version.outputs.version }}.apk"
+          cp "$SRC" "dist/DAJ RiderApp.apk"
           ls -lh dist
 
       - name: Remove the keystore from the runner
@@ -288,7 +296,7 @@ jobs:
             echo
             echo "| File | What it is |"
             echo "|---|---|"
-            echo "| \`daj-rider-${VERSION}.apk\` | Rider Android app. Download on the phone and open it to install. |"
+            echo "| \`DAJ RiderApp.apk\` | Rider Android app. Download on the phone and open it to install. |"
             echo "| \`daj-admin-web-${VERSION}.zip\` | Built admin dashboard. Unzip onto any static host. |"
             echo "| \`daj-backend-${VERSION}.zip\` | Compiled API. \`npm ci --omit=dev && npx prisma migrate deploy && node dist/src/index.js\`. |"
             echo

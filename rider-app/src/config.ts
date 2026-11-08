@@ -22,6 +22,10 @@ export const DEFAULT_API_BASE_URL = __DEV__
   ? Platform.select({ android: 'http://10.0.2.2:4000', default: 'http://localhost:4000' })!
   : PRODUCTION_API_BASE_URL;
 
+/** GitHub Releases endpoint checked on startup for newer rider APKs. */
+export const GITHUB_RELEASES_LATEST_URL =
+  'https://api.github.com/repos/nandan8983/DurgeshAmlaJuice/releases/latest';
+
 /** How long cached route/customer data is considered usable while offline. */
 export const OFFLINE_CACHE_TTL_MS = 36 * 60 * 60 * 1000;
 

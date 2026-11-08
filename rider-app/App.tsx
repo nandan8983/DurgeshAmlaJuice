@@ -11,6 +11,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppNavigator } from './src/navigation';
 import { useAuthStore } from './src/store/auth';
 import { startQueueSync, useQueueStore } from './src/store/queue';
+import { startUpdateChecker } from './src/lib/updater';
 import { colors } from './src/theme';
 
 const queryClient = new QueryClient({
@@ -38,8 +39,12 @@ function App(): React.JSX.Element {
 
   useEffect(() => {
     const stop = startQueueSync();
+    const stopUpdater = startUpdateChecker();
     setQueueReady(true);
-    return stop;
+    return () => {
+      stop();
+      stopUpdater();
+    };
   }, []);
 
   useEffect(() => {
