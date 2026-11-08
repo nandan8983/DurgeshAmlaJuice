@@ -109,6 +109,17 @@ cd ../rider-app && npm test     # on-device nearest-first ordering
 cd ../admin-web && npm run build
 ```
 
+## Builds and releases
+
+Every push to a branch or PR runs the full test suite in GitHub Actions
+(`.github/workflows/ci.yml`), including the integration tests against a real
+PostgreSQL. Every push to `main` additionally builds and publishes a GitHub
+Release (`.github/workflows/release.yml`) with the rider APK, the built
+dashboard and the compiled API attached — gated on those tests passing.
+
+Set `ANDROID_KEYSTORE_BASE64` and friends to get a properly signed APK; see
+[DEPLOYMENT.md](DEPLOYMENT.md#automated-builds-and-releases-github-actions).
+
 ## Deployment
 
 Two options, same code: your own Linux server behind Cloudflare Tunnel
