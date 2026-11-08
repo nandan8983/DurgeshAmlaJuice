@@ -176,6 +176,17 @@ docker compose up -d api
 
 Migrations run automatically on every deploy via `preDeployCommand`.
 
+> **If you create the service by hand instead of from the blueprint**, set the
+> build command to `npm ci --include=dev && npm run build`, not plain
+> `npm ci`. `NODE_ENV=production` makes npm skip devDependencies, which is
+> where TypeScript, `@types/node` and the Prisma CLI live — the build then
+> fails with `Cannot find type definition file for 'node'`, or quietly compiles
+> with a different TypeScript than the one the lockfile pins. The root
+> directory must be `backend`, the start command `npm start`, and the health
+> check path `/health`. Migrations are yours to run from the Shell
+> (`npx prisma migrate deploy`) unless you are on a plan that supports a
+> pre-deploy command.
+
 ### 2. Seed once
 
 Render dashboard → `daj-api` → **Shell**:

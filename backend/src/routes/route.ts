@@ -15,7 +15,7 @@ import { actorOf, authenticate } from '../middleware/auth';
 import { and, deliveryScope } from '../domain/scope';
 import { diffDays, isDateOnly, toDateOnly, toUtcDate, today } from '../domain/dates';
 import { sortByDistance, type Coords } from '../domain/geo';
-import { ensureRouteGenerated } from '../services/routeGenerator';
+import { ensureRouteGenerated, generateRouteForDate } from '../services/routeGenerator';
 import { env } from '../env';
 
 export const routeRouter = Router();
@@ -160,7 +160,6 @@ routeRouter.post(
   asyncHandler(async (req, res) => {
     const actor = actorOf(req);
     if (actor.role === 'rider') throw badRequest('Only an admin or supervisor can regenerate a route');
-    const { generateRouteForDate } = await import('../services/routeGenerator');
     const result = await generateRouteForDate((req.body as { date?: string }).date ?? today());
     res.json({ result });
   }),

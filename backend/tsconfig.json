@@ -1,8 +1,12 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "CommonJS",
-    "moduleResolution": "node",
+    // node16 rather than the old "commonjs"/"node" (node10) pair: TypeScript 7
+    // removed node10 resolution, so the old setting fails the build outright on
+    // any toolchain newer than the one pinned here. node16 still emits
+    // CommonJS, matching "type": "commonjs" in package.json.
+    "module": "node16",
+    "moduleResolution": "node16",
     "lib": ["ES2022"],
     "outDir": "dist",
     "rootDir": ".",

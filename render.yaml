@@ -19,7 +19,11 @@ services:
     runtime: node
     plan: starter
     rootDir: backend
-    buildCommand: npm ci && npx prisma generate && npx tsc -p tsconfig.json
+    # --include=dev matters: NODE_ENV is production below, and npm then skips
+    # devDependencies, which is where TypeScript, the Prisma CLI and @types/node
+    # live. Without it the build either fails outright or silently compiles with
+    # whatever TypeScript happens to be on the image instead of the pinned one.
+    buildCommand: npm ci --include=dev && npm run build
     # Migrations run on every deploy; Prisma skips the ones already applied.
     preDeployCommand: npx prisma migrate deploy
     startCommand: node dist/src/index.js
@@ -64,7 +68,7 @@ services:
     name: daj-admin
     runtime: static
     rootDir: admin-web
-    buildCommand: npm ci && npm run build
+    buildCommand: npm ci --include=dev && npm run build
     staticPublishPath: dist
     autoDeploy: true
     envVars:
