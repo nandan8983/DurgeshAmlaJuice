@@ -12,6 +12,30 @@ if (localPropsFile.exists()) {
 }
 def mapsApiKey = localProps.getProperty("MAPS_API_KEY") ?: (System.getenv("MAPS_API_KEY") ?: "")
 
+// Release signing. The React Native template signs release builds with the
+// *debug* keystore, whose password is public — fine for a local smoke test,
+// never for an APK handed to riders. Supply a real keystore through
+// android/local.properties or the environment (which is what CI does) and the
+// release build uses it; without one the build still works but stays
+// debug-signed, and the CI job labels the artifact accordingly.
+def releaseStoreFileName = localProps.getProperty("RELEASE_STORE_FILE") ?: System.getenv("RELEASE_STORE_FILE")
+def releaseStorePassword = localProps.getProperty("RELEASE_STORE_PASSWORD") ?: System.getenv("RELEASE_STORE_PASSWORD")
+def releaseKeyAlias = localProps.getProperty("RELEASE_KEY_ALIAS") ?: System.getenv("RELEASE_KEY_ALIAS")
+def releaseKeyPassword = localProps.getProperty("RELEASE_KEY_PASSWORD") ?: System.getenv("RELEASE_KEY_PASSWORD")
+
+def releaseStore = releaseStoreFileName ? file(releaseStoreFileName) : null
+def hasReleaseSigning = releaseStore != null && releaseStore.exists() &&
+    releaseStorePassword && releaseKeyAlias && releaseKeyPassword
+
+if (!hasReleaseSigning) {
+    logger.warn("WARNING: no release keystore configured — release builds will be signed " +
+        "with the public debug key. See rider-app/README-SETUP.md.")
+}
+
+// Version, overridable by CI so each build gets a unique, increasing code.
+def resolvedVersionCode = (System.getenv("VERSION_CODE") ?: "1") as Integer
+def resolvedVersionName = System.getenv("VERSION_NAME") ?: "1.0"
+
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
@@ -92,8 +116,8 @@ android {
         applicationId "in.durgeshamlajuice.rider"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode resolvedVersionCode
+        versionName resolvedVersionName
         manifestPlaceholders = [MAPS_API_KEY: mapsApiKey]
     }
     signingConfigs {
@@ -103,15 +127,23 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        if (hasReleaseSigning) {
+            release {
+                storeFile releaseStore
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // A real keystore when one is configured, the debug key otherwise
+            // (with the warning logged above).
+            signingConfig hasReleaseSigning ? signingConfigs.release : signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }

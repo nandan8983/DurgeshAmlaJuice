@@ -1,0 +1,126 @@
+# Tests for every push and pull request.
+#
+# Also callable from release.yml, so a release can only be cut from a commit
+# whose tests passed. Pushes to main are deliberately not triggered here —
+# release.yml calls this workflow instead, so the suite does not run twice.
+
+name: CI
+
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+    branches: [main]
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (unit + integration)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # A real PostgreSQL for the integration suite. It truncates and re-seeds the
+    # database, which is exactly why it gets a throwaway one of its own.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: daj
+          POSTGRES_PASSWORD: daj_ci_password
+          POSTGRES_DB: daj_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://daj:daj_ci_password@localhost:5432/daj_test?schema=public
+      TEST_DATABASE_URL: postgresql://daj:daj_ci_password@localhost:5432/daj_test?schema=public
+      JWT_SECRET: ci-only-secret-not-used-anywhere-real
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install
+        working-directory: backend
+        run: npm ci
+
+      - name: Generate Prisma client
+        working-directory: backend
+        run: npx prisma generate
+
+      - name: Typecheck (includes test sources)
+        working-directory: backend
+        run: npm run typecheck
+
+      - name: Unit tests
+        working-directory: backend
+        run: npm test
+
+      - name: Integration tests against PostgreSQL
+        working-directory: backend
+        run: npm run test:integration
+
+  admin-web:
+    name: Admin web
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: admin-web/package-lock.json
+
+      - name: Install
+        working-directory: admin-web
+        run: npm ci
+
+      - name: Build (typechecks via tsc -b)
+        working-directory: admin-web
+        run: npm run build
+
+  rider-app:
+    name: Rider app (JS)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: rider-app/package-lock.json
+
+      - name: Install
+        working-directory: rider-app
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: rider-app
+        run: npx tsc --noEmit
+
+      - name: Tests
+        working-directory: rider-app
+        run: npm test

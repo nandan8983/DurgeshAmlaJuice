@@ -241,6 +241,105 @@ curl -s https://api.your-domain/health
 
 ---
 
+## Automated builds and releases (GitHub Actions)
+
+Two workflows live in `.github/workflows`:
+
+| Workflow | Runs on | Does |
+|---|---|---|
+| `ci.yml` | every push to a non-`main` branch, every PR | typecheck, 83 unit tests, 54 integration tests against a real PostgreSQL service container, admin-web build, rider-app typecheck and tests |
+| `release.yml` | every push to `main`, any `v*` tag, or manually | runs `ci.yml` first, then builds and publishes a GitHub Release |
+
+A push to `main` therefore produces a release automatically, with three files
+attached:
+
+| Asset | What to do with it |
+|---|---|
+| `daj-rider-<version>.apk` | Download on the rider's phone and open it to install |
+| `daj-admin-web-<version>.zip` | Unzip onto any static host |
+| `daj-backend-<version>.zip` | `npm ci --omit=dev && npx prisma migrate deploy && node dist/src/index.js` |
+
+Tests gate the release: if anything fails, nothing is published.
+
+### Versioning
+
+The version is the `VERSION` file at the repo root plus the workflow run number,
+so `VERSION=0.1.0` on run 7 publishes the tag `v0.1.0-build.7`. Bump `VERSION`
+when you want a new minor or major line. The Android `versionCode` is the run
+number, which always increases — a requirement if you ever publish to the Play
+Store.
+
+Pushing a tag by hand instead publishes a clean release at that exact tag:
+
+```bash
+git tag v0.2.0 && git push origin v0.2.0
+```
+
+Changes to `*.md` files alone do not trigger a release.
+
+### Secrets and variables to configure
+
+Settings → Secrets and variables → Actions.
+
+| Name | Kind | Needed for |
+|---|---|---|
+| `ANDROID_KEYSTORE_BASE64` | secret | Signing the APK properly. **Without it the APK is debug-signed** and the release says so. |
+| `ANDROID_KEYSTORE_PASSWORD` | secret | " |
+| `ANDROID_KEY_ALIAS` | secret | " |
+| `ANDROID_KEY_PASSWORD` | secret | " |
+| `MAPS_API_KEY` | secret | The map on the rider's Add Customer screen. Without it that map is blank; everything else works. |
+| `API_BASE_URL` | variable | Baked into the dashboard bundle at build time. Without it the bundle points at `http://localhost:4000`. |
+
+Nothing is required to get a first green run — the workflow degrades and warns
+rather than failing.
+
+### Creating the release keystore
+
+Do this once, on your own machine:
+
+```bash
+keytool -genkeypair -v -storetype PKCS12 \
+  -keystore daj-rider-release.keystore \
+  -alias daj-rider -keyalg RSA -keysize 2048 -validity 10000
+```
+
+Then turn it into the secret value:
+
+```bash
+# Linux/macOS
+base64 -w 0 daj-rider-release.keystore
+
+# Windows PowerShell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("daj-rider-release.keystore"))
+```
+
+Paste that into `ANDROID_KEYSTORE_BASE64`, and set the other three secrets to
+the store password, `daj-rider`, and the key password.
+
+> **Back the keystore file up somewhere safe and permanent.** Android identifies
+> an app by its signing key: lose it and you can never ship an upgrade that
+> installs over the existing one — every rider would have to uninstall and
+> reinstall, losing any unsynced queue on their phone. Keep it out of the repo
+> (`.gitignore` already covers `*.keystore`).
+
+### Local release build
+
+The same signing path works locally. Put these in
+`rider-app/android/local.properties`:
+
+```properties
+MAPS_API_KEY=AIza...
+RELEASE_STORE_FILE=/absolute/path/to/daj-rider-release.keystore
+RELEASE_STORE_PASSWORD=...
+RELEASE_KEY_ALIAS=daj-rider
+RELEASE_KEY_PASSWORD=...
+```
+
+Then `cd rider-app/android && ./gradlew assembleRelease`. With no keystore
+configured the build still succeeds, logging a warning and using the debug key.
+
+---
+
 ## The rider app
 
 The app is distributed as an APK, not through this deployment.
