@@ -12,13 +12,15 @@
     "dev": "tsx watch src/index.ts",
     "build": "prisma generate && tsc -p tsconfig.json",
     "start": "node dist/src/index.js",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "test": "vitest run --exclude tests/integration/**",
     "test:watch": "vitest",
     "prisma:generate": "prisma generate",
     "migrate:dev": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts",
+    "test:integration": "vitest run tests/integration",
+    "test:all": "vitest run"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -7,7 +7,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { prisma, toNumber } from '../prisma';
-import { asyncHandler, forbidden } from '../errors';
+import { asyncHandler, forbidden, notFound } from '../errors';
 import { validate } from '../middleware/validate';
 import { actorOf, authenticate, requireStaff } from '../middleware/auth';
 import { and, customerScope } from '../domain/scope';
@@ -198,7 +198,9 @@ customersRouter.get(
       where: and({ id }, customerScope(actor)),
       select: customerSelect,
     });
-    if (!row) throw forbidden('Customer not found');
+    // 404, not 403: "out of your scope" must look the same as "does not exist",
+    // or the status code itself confirms that a customer id is real.
+    if (!row) throw notFound('Customer not found');
 
     const [subscriptions, payments] = await Promise.all([
       prisma.subscription.findMany({

@@ -31,7 +31,11 @@ export function createApp(): Express {
         // No Origin header: server-to-server, curl, or the mobile app.
         if (!origin) return callback(null, true);
         if (corsOrigins.includes(origin) || corsOrigins.includes('*')) return callback(null, true);
-        callback(new Error(`Origin ${origin} is not allowed`));
+        // Refuse by withholding the CORS headers rather than raising an error:
+        // the browser blocks the response either way, and this keeps a probe
+        // from being logged as a 500.
+        logger.warn({ origin }, 'Blocked a request from an unlisted origin');
+        callback(null, false);
       },
       credentials: false,
     }),

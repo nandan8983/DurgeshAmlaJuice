@@ -1,0 +1,85 @@
+# Option 2 deployment: Render (managed Postgres + web service for the API +
+# static site for the admin dashboard).
+#
+# Create from the Render dashboard with "New → Blueprint" pointed at this repo.
+# Secrets marked sync:false are entered once in the dashboard.
+
+databases:
+  - name: daj-postgres
+    databaseName: daj
+    user: daj
+    plan: basic-256mb
+    postgresMajorVersion: '16'
+    # Render takes its own daily snapshots on paid plans; the nightly pg_dump in
+    # DEPLOYMENT.md is still worth running so a copy exists outside Render.
+
+services:
+  - type: web
+    name: daj-api
+    runtime: node
+    plan: starter
+    rootDir: backend
+    buildCommand: npm ci && npx prisma generate && npx tsc -p tsconfig.json
+    # Migrations run on every deploy; Prisma skips the ones already applied.
+    preDeployCommand: npx prisma migrate deploy
+    startCommand: node dist/src/index.js
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: daj-postgres
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 30d
+      - key: BCRYPT_ROUNDS
+        value: '10'
+      # Set this to the admin site's URL once it is deployed, e.g.
+      # https://daj-admin.onrender.com
+      - key: CORS_ORIGINS
+        sync: false
+      - key: TRUST_PROXY
+        value: 'true'
+      - key: TZ_BUSINESS
+        value: Asia/Kolkata
+      - key: RENEWAL_ALERT_DAYS
+        value: '2'
+      # node-cron runs inside the web service. Keep the service on a plan that
+      # does not sleep, or the 04:30 route generation can be missed — the
+      # generate-on-first-request fallback in GET /route/today covers that case.
+      - key: ENABLE_CRON
+        value: 'true'
+      - key: ROUTE_CRON
+        value: 30 4 * * *
+      - key: EXPIRY_CRON
+        value: 0 1 * * *
+      - key: LOG_LEVEL
+        value: info
+
+  - type: web
+    name: daj-admin
+    runtime: static
+    rootDir: admin-web
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    autoDeploy: true
+    envVars:
+      # The API's public URL, e.g. https://daj-api.onrender.com
+      - key: VITE_API_BASE_URL
+        sync: false
+    routes:
+      # Single-page app: every path serves index.html.
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
