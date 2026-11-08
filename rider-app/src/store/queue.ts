@@ -13,7 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { create } from 'zustand';
 import { STORAGE_KEYS } from '../config';
-import { ApiError } from '../api/client';
+import { ApiError, getAuthToken } from '../api/client';
 import {
   createCustomer,
   recordPayment,
@@ -91,7 +91,7 @@ export const useQueueStore = create<QueueState>((set, get) => {
     },
 
     flush: async () => {
-      if (get().syncing || get().items.length === 0) return;
+      if (get().syncing || get().items.length === 0 || !getAuthToken()) return;
       set({ syncing: true, lastError: null });
 
       try {

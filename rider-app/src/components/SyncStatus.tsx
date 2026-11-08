@@ -4,14 +4,12 @@ import { useQueueStore } from '../store/queue';
 import { Banner } from './ui';
 
 export function SyncStatus(): React.JSX.Element | null {
-  const { items, failed, online, syncing, flush, retryFailed } = useQueueStore(state => ({
-    items: state.items,
-    failed: state.failed,
-    online: state.online,
-    syncing: state.syncing,
-    flush: state.flush,
-    retryFailed: state.retryFailed,
-  }));
+  const items = useQueueStore(state => state.items);
+  const failed = useQueueStore(state => state.failed);
+  const online = useQueueStore(state => state.online);
+  const syncing = useQueueStore(state => state.syncing);
+  const flush = useQueueStore(state => state.flush);
+  const retryFailed = useQueueStore(state => state.retryFailed);
 
   if (failed.length > 0) {
     return (

@@ -14,6 +14,7 @@ import { DaySummaryScreen } from './screens/DaySummaryScreen';
 import { colors, spacing } from './theme';
 
 export type RootStackParamList = {
+  Login: undefined;
   Route: undefined;
   NextStop: { deliveryId: string };
   Customers: undefined;
@@ -50,6 +51,7 @@ export function AppNavigator(): React.JSX.Element {
     <NavigationContainer>
       {token ? (
         <Stack.Navigator
+          key="authenticated"
           screenOptions={{
             headerStyle: { backgroundColor: colors.primaryDark },
             headerTintColor: '#fff',
@@ -84,8 +86,8 @@ export function AppNavigator(): React.JSX.Element {
           <Stack.Screen name="DaySummary" component={DaySummaryScreen} options={{ title: 'Day summary' }} />
         </Stack.Navigator>
       ) : (
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="Route" component={LoginScreen} />
+        <Stack.Navigator key="unauthenticated" screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="Login" component={LoginScreen} />
         </Stack.Navigator>
       )}
     </NavigationContainer>

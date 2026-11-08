@@ -14,6 +14,7 @@ export const login = (mobile: string, password: string): Promise<LoginResponse> 
     method: 'POST',
     body: { mobile, password },
     anonymous: true,
+    timeoutMs: 60_000,
   });
 
 export const fetchTodayRoute = (coords?: { latitude: number; longitude: number } | null): Promise<TodayRoute> =>

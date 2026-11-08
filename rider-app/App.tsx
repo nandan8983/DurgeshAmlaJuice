@@ -10,7 +10,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppNavigator } from './src/navigation';
 import { useAuthStore } from './src/store/auth';
-import { startQueueSync } from './src/store/queue';
+import { startQueueSync, useQueueStore } from './src/store/queue';
 import { colors } from './src/theme';
 
 const queryClient = new QueryClient({
@@ -29,6 +29,7 @@ const queryClient = new QueryClient({
 function App(): React.JSX.Element {
   const restore = useAuthStore(state => state.restore);
   const restored = useAuthStore(state => state.restored);
+  const token = useAuthStore(state => state.token);
   const [queueReady, setQueueReady] = useState(false);
 
   useEffect(() => {
@@ -40,6 +41,14 @@ function App(): React.JSX.Element {
     setQueueReady(true);
     return stop;
   }, []);
+
+  useEffect(() => {
+    if (token) {
+      void useQueueStore.getState().flush();
+    } else {
+      queryClient.clear();
+    }
+  }, [token]);
 
   return (
     <SafeAreaProvider>
