@@ -12,8 +12,14 @@ import { logger, maskMobile } from '../logger';
 export const authRouter = Router();
 
 const loginSchema = z.object({
-  mobile: z.string().trim().min(6).max(20),
-  password: z.string().min(1).max(200),
+  // The username is the mobile number — people reach for "admin" otherwise,
+  // so say so in the error rather than reporting a character count.
+  mobile: z
+    .string()
+    .trim()
+    .min(6, 'Sign in with your mobile number, not a username')
+    .max(20, 'That does not look like a mobile number'),
+  password: z.string().min(1, 'Enter your password').max(200),
 });
 
 const changePasswordSchema = z.object({
