@@ -20,6 +20,7 @@
     "prisma:generate": "prisma generate",
     "seed": "tsx prisma/seed.ts",
     "start": "node dist/src/index.js",
+    "start:migrate": "prisma migrate deploy && node dist/src/index.js",
     "test": "vitest run",
     "test:all": "vitest run && vitest run --config vitest.integration.config.ts",
     "test:integration": "vitest run --config vitest.integration.config.ts",
