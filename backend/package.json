@@ -20,9 +20,9 @@
     "prisma:generate": "prisma generate",
     "seed": "tsx prisma/seed.ts",
     "start": "node dist/src/index.js",
-    "test": "vitest run --exclude tests/integration/**",
-    "test:all": "vitest run",
-    "test:integration": "vitest run tests/integration",
+    "test": "vitest run",
+    "test:all": "vitest run && vitest run --config vitest.integration.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.test.json"
   },

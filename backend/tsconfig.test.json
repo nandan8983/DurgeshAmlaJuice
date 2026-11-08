@@ -4,5 +4,8 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["src/**/*.ts", "prisma/**/*.ts", "tests/**/*.ts", "vitest.config.ts"]
+  // The vitest.*.config.ts files are deliberately not listed: they import the
+  // ESM-only "vitest/config", which cannot be type-checked in this CommonJS
+  // program. Running vitest validates them.
+  "include": ["src/**/*.ts", "prisma/**/*.ts", "tests/**/*.ts"]
 }
