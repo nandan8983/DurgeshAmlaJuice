@@ -108,8 +108,12 @@ jobs:
       - name: Set up the Android SDK
         uses: android-actions/setup-android@v3
         with:
+          # Platforms are published with a minor version now: the package is
+          # "platforms;android-37.0", and a plain "platforms;android-37" does
+          # not exist, which fails sdkmanager with "Failed to find package".
+          # compileSdkVersion 37 in android/build.gradle resolves to this.
           packages: >-
-            platforms;android-37
+            platforms;android-37.0
             build-tools;37.0.0
             ndk;27.1.12297006
 
