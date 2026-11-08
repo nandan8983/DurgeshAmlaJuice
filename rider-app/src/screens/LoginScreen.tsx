@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -9,8 +10,11 @@ import {
   View,
 } from 'react-native';
 import { useAuthStore } from '../store/auth';
+import { UpdateBanner } from '../components/UpdateBanner';
 import { Banner, Button, Card, Field, styles as ui } from '../components/ui';
 import { colors, spacing } from '../theme';
+
+const AMLA_LOGO = require('../assets/amla-logo.png');
 
 export function LoginScreen(): React.JSX.Element {
   const { login, loading, error, apiBaseUrl, setApiBaseUrl } = useAuthStore();
@@ -32,8 +36,13 @@ export function LoginScreen(): React.JSX.Element {
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <Image source={AMLA_LOGO} style={styles.logo} resizeMode="contain" />
         <Text style={styles.brand}>Durgesh Amla Juice</Text>
-        <Text style={styles.subtitle}>Rider app</Text>
+        <Text style={styles.subtitle}>DAJ RiderApp</Text>
+
+        <View style={styles.updateRow}>
+          <UpdateBanner />
+        </View>
 
         <Card style={styles.card}>
           {error ? <Banner tone="danger" text={error} /> : null}
@@ -111,7 +120,13 @@ export function LoginScreen(): React.JSX.Element {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
-  container: { padding: spacing.lg, paddingTop: spacing.xxl * 2 },
+  container: { padding: spacing.lg, paddingTop: spacing.xxl },
+  logo: {
+    width: 112,
+    height: 112,
+    alignSelf: 'center',
+    marginBottom: spacing.sm,
+  },
   brand: { fontSize: 26, fontWeight: '800', color: colors.primaryDark, textAlign: 'center' },
   subtitle: {
     fontSize: 15,
@@ -120,6 +135,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   card: { marginBottom: spacing.lg, gap: 0 },
+  updateRow: { marginBottom: spacing.md },
   serverRow: { alignItems: 'center', marginTop: spacing.sm },
   serverText: { fontSize: 12, color: colors.textMuted, textDecorationLine: 'underline' },
 });

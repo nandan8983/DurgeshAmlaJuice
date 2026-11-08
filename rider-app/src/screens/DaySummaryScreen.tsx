@@ -7,7 +7,9 @@ import { useTodayRoute } from '../hooks/useRoute';
 import { request } from '../api/client';
 import { useAuthStore } from '../store/auth';
 import { useQueueStore } from '../store/queue';
+import { installReleaseUpdate, useUpdateStore } from '../lib/updater';
 import { SyncStatus } from '../components/SyncStatus';
+import { UpdateBanner } from '../components/UpdateBanner';
 import { Banner, Button, Card, Pill } from '../components/ui';
 import { colors, productColor, productLabel, spacing } from '../theme';
 
@@ -22,6 +24,10 @@ export function DaySummaryScreen(): React.JSX.Element {
   const logout = useAuthStore(state => state.logout);
   const user = useAuthStore(state => state.user);
   const queued = useQueueStore(state => state.items.length);
+  const installedVersion = useUpdateStore(state => state.installed.versionName);
+  const availableUpdate = useUpdateStore(state => state.available);
+  const checkingUpdate = useUpdateStore(state => state.checking);
+  const checkForUpdate = useUpdateStore(state => state.checkForUpdate);
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -40,6 +46,7 @@ export function DaySummaryScreen(): React.JSX.Element {
 
   return (
     <ScrollView style={styles.flex} contentContainerStyle={styles.container}>
+      <UpdateBanner />
       <SyncStatus />
 
       <Card>
@@ -92,6 +99,26 @@ export function DaySummaryScreen(): React.JSX.Element {
                 • {stop.name} — {stop.status === 'skipped' ? 'skipped' : 'not home'}
               </Text>
             ))
+        )}
+      </Card>
+
+      <Card style={styles.spaced}>
+        <Text style={styles.sectionTitle}>App update</Text>
+        <Text style={styles.meta}>Installed version: v{installedVersion}</Text>
+        {availableUpdate ? (
+          <Button
+            label={`Install latest update (v${availableUpdate.version})`}
+            style={styles.spaced}
+            onPress={() => void installReleaseUpdate(availableUpdate)}
+          />
+        ) : (
+          <Button
+            label="Check for update"
+            variant="secondary"
+            style={styles.spaced}
+            loading={checkingUpdate}
+            onPress={() => void checkForUpdate({ silent: false })}
+          />
         )}
       </Card>
 

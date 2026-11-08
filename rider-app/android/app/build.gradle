@@ -148,6 +148,25 @@ android {
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
     }
+
+    // Keep default app-debug.apk / app-release.apk for React Native CLI and CI,
+    // and also write "DAJ RiderApp.apk" in the same output folder.
+    applicationVariants.configureEach { variant ->
+        variant.assembleProvider.configure {
+            doLast {
+                variant.outputs.each { output ->
+                    def outFile = output.outputFile
+                    if (outFile != null && outFile.exists()) {
+                        copy {
+                            from outFile
+                            into outFile.parentFile
+                            rename { "DAJ RiderApp.apk" }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 dependencies {

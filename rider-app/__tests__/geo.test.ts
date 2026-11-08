@@ -4,6 +4,7 @@
  * well as on the server.
  */
 import { formatDistance, haversineMeters, sortByDistance } from '../src/lib/geo';
+import { isNewerRelease } from '../src/lib/updater';
 
 const SHIRPUR = { latitude: 21.3486, longitude: 74.8805 };
 
@@ -52,5 +53,34 @@ describe('formatDistance', () => {
     expect(formatDistance(420)).toBe('420 m');
     expect(formatDistance(1500)).toBe('1.5 km');
     expect(formatDistance(null)).toBe('—');
+  });
+});
+
+describe('isNewerRelease', () => {
+  it('treats any published release as newer than a local dev build', () => {
+    expect(
+      isNewerRelease({ versionName: '0.1.0-dev', versionCode: 1 }, 'v0.1.0-build.5'),
+    ).toBe(true);
+    expect(
+      isNewerRelease({ versionName: '1.0', versionCode: 1 }, 'v0.1.0-build.5'),
+    ).toBe(true);
+  });
+
+  it('compares build numbers for matching base versions', () => {
+    expect(
+      isNewerRelease({ versionName: '0.1.0-build.5', versionCode: 5 }, 'v0.1.0-build.6'),
+    ).toBe(true);
+    expect(
+      isNewerRelease({ versionName: '0.1.0-build.6', versionCode: 6 }, 'v0.1.0-build.6'),
+    ).toBe(false);
+    expect(
+      isNewerRelease({ versionName: '0.1.0-build.7', versionCode: 7 }, 'v0.1.0-build.6'),
+    ).toBe(false);
+  });
+
+  it('compares semantic versions across major/minor/patch bumps', () => {
+    expect(
+      isNewerRelease({ versionName: '0.1.0-build.12', versionCode: 12 }, 'v0.2.0-build.1'),
+    ).toBe(true);
   });
 });
