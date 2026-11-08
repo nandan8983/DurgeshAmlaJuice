@@ -60,10 +60,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         throw new Error('This app is for riders. Supervisors use the web dashboard.');
       }
       setAuthToken(result.token);
-      await Promise.all([
-        AsyncStorage.setItem(STORAGE_KEYS.token, result.token),
-        AsyncStorage.setItem(STORAGE_KEYS.user, JSON.stringify(result.user)),
-      ]);
+      try {
+        await Promise.all([
+          AsyncStorage.setItem(STORAGE_KEYS.token, result.token),
+          AsyncStorage.setItem(STORAGE_KEYS.user, JSON.stringify(result.user)),
+        ]);
+      } catch {
+        // Storage failure must not block the rider from starting their shift.
+      }
       set({ token: result.token, user: result.user, loading: false, error: null });
     } catch (err) {
       set({ loading: false, error: (err as Error).message });
@@ -73,17 +77,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   logout: async () => {
     setAuthToken(null);
+    set(state => ({ token: null, user: null, error: state.token ? null : state.error }));
     // The queue is deliberately left alone: unsynced deliveries must survive a
     // logout, or a rider who logs out in a dead spot loses their morning.
-    await Promise.all(
-      [
-        STORAGE_KEYS.token,
-        STORAGE_KEYS.user,
-        STORAGE_KEYS.routeCache,
-        STORAGE_KEYS.customersCache,
-      ].map(key => AsyncStorage.removeItem(key)),
-    );
-    set({ token: null, user: null, error: null });
+    try {
+      await Promise.all(
+        [
+          STORAGE_KEYS.token,
+          STORAGE_KEYS.user,
+          STORAGE_KEYS.routeCache,
+          STORAGE_KEYS.customersCache,
+        ].map(key => AsyncStorage.removeItem(key)),
+      );
+    } catch {
+      // ignore
+    }
   },
 
   setApiBaseUrl: async (url: string) => {

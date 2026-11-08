@@ -78,7 +78,7 @@ export function LoginScreen(): React.JSX.Element {
             here means no rebuild when the API moves. */}
         {showServer ? (
           <Card style={styles.card}>
-            <Field label="API address" hint="Example: https://api.durgeshamlajuice.in">
+            <Field label="API address" hint="Example: https://daj-api.onrender.com">
               <TextInput
                 style={ui.input}
                 value={serverDraft}

@@ -21,6 +21,10 @@ export function setAuthToken(token: string | null): void {
   authToken = token;
 }
 
+export function getAuthToken(): string | null {
+  return authToken;
+}
+
 /** The auth store registers a logout here, for when a token expires mid-shift. */
 export function setUnauthorizedHandler(handler: (() => void) | null): void {
   onUnauthorized = handler;
@@ -85,7 +89,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
       const errorBody = payload as ApiErrorBody | null;
       const code = errorBody?.error?.code ?? 'http_error';
       const message = errorBody?.error?.message ?? `Request failed (${response.status})`;
-      if (response.status === 401) onUnauthorized?.();
+      if (response.status === 401 && !anonymous) onUnauthorized?.();
       throw new ApiError(response.status, code, message);
     }
 

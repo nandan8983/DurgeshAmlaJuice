@@ -22,19 +22,23 @@ export type PermissionState = 'unknown' | 'granted' | 'denied' | 'blocked';
 
 export async function requestLocationPermission(): Promise<PermissionState> {
   if (Platform.OS !== 'android') return 'granted';
-  const result = await PermissionsAndroid.request(
-    PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-    {
-      title: 'Location for your delivery route',
-      message:
-        'The app uses your location to show the nearest pending customer and to pin new customers at their door.',
-      buttonPositive: 'Allow',
-      buttonNegative: 'Not now',
-    },
-  );
-  if (result === PermissionsAndroid.RESULTS.GRANTED) return 'granted';
-  if (result === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) return 'blocked';
-  return 'denied';
+  try {
+    const result = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+      {
+        title: 'Location for your delivery route',
+        message:
+          'The app uses your location to show the nearest pending customer and to pin new customers at their door.',
+        buttonPositive: 'Allow',
+        buttonNegative: 'Not now',
+      },
+    );
+    if (result === PermissionsAndroid.RESULTS.GRANTED) return 'granted';
+    if (result === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) return 'blocked';
+    return 'denied';
+  } catch {
+    return 'denied';
+  }
 }
 
 export function getCurrentPosition(): Promise<Coords> {
