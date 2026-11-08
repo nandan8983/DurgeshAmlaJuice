@@ -1,0 +1,291 @@
+// Mirrors ../../schema.sql one-to-one. schema.sql stays the source of truth;
+// `prisma migrate dev` turns this into the migrations that recreate the database.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  admin
+  supervisor
+  rider
+
+  @@map("user_role")
+}
+
+enum CustomerStatus {
+  active
+  inactive
+
+  @@map("customer_status")
+}
+
+/// Plan/subscription product. `combo` alternates amla and beetroot per delivery day.
+enum ProductKind {
+  amla
+  beetroot
+  combo
+
+  @@map("product_kind")
+}
+
+/// What actually goes in the bottle on a given day — combo is already resolved.
+enum DeliveryProduct {
+  amla
+  beetroot
+
+  @@map("delivery_product")
+}
+
+enum SubscriptionStatus {
+  active
+  paused
+  expired
+  cancelled
+
+  @@map("subscription_status")
+}
+
+enum PaymentMode {
+  cash
+  upi
+  other
+
+  @@map("payment_mode")
+}
+
+enum PaymentStatus {
+  pending
+  paid
+
+  @@map("payment_status")
+}
+
+enum DeliveryStatus {
+  pending
+  delivered
+  skipped
+  not_home
+
+  @@map("delivery_status")
+}
+
+enum LeadStatus {
+  new
+  contacted
+  converted
+  rejected
+
+  @@map("lead_status")
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String
+  mobile       String   @unique
+  email        String?  @unique
+  passwordHash String   @map("password_hash")
+  role         UserRole
+  supervisorId String?  @map("supervisor_id") @db.Uuid
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  supervisor         User?          @relation("SupervisorRiders", fields: [supervisorId], references: [id], onDelete: SetNull)
+  riders             User[]         @relation("SupervisorRiders")
+  customers          Customer[]     @relation("CustomerRider")
+  customersCreated   Customer[]     @relation("CustomerCreatedBy")
+  deliveries         Delivery[]     @relation("DeliveryRider")
+  deliveriesUpdated  Delivery[]     @relation("DeliveryUpdatedBy")
+  paymentsCollected  Payment[]      @relation("PaymentCollectedBy")
+  subscriptionsMade  Subscription[] @relation("SubscriptionCreatedBy")
+  pausesStarted      SubscriptionPause[] @relation("PauseBy")
+  pausesResumed      SubscriptionPause[] @relation("ResumeBy")
+
+  @@index([role])
+  @@index([supervisorId])
+  @@map("users")
+}
+
+/// price = total plan price for ONE bottle/day over duration_days.
+/// Subscription amount = price * bottlesPerDay.
+model Plan {
+  id           String      @id @default(uuid()) @db.Uuid
+  name         String
+  product      ProductKind
+  durationDays Int         @map("duration_days")
+  price        Decimal     @db.Decimal(10, 2)
+  isTrial      Boolean     @default(false) @map("is_trial")
+  isActive     Boolean     @default(true) @map("is_active")
+  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  subscriptions Subscription[]
+  leads         Lead[]
+
+  @@unique([product, durationDays])
+  @@map("plans")
+}
+
+model Customer {
+  id            String         @id @default(uuid()) @db.Uuid
+  name          String
+  mobile        String
+  bottlesPerDay Int            @default(1) @map("bottles_per_day")
+  status        CustomerStatus @default(active)
+  area          String?
+  address       String?
+  landmark      String?
+  city          String         @default("Shirpur")
+  notes         String?
+  latitude      Decimal?       @db.Decimal(10, 7)
+  longitude     Decimal?       @db.Decimal(10, 7)
+  riderId       String         @map("rider_id") @db.Uuid
+  createdById   String?        @map("created_by") @db.Uuid
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  rider         User           @relation("CustomerRider", fields: [riderId], references: [id], onDelete: Restrict)
+  createdBy     User?          @relation("CustomerCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  subscriptions Subscription[]
+  deliveries    Delivery[]
+  payments      Payment[]
+  leads         Lead[]
+
+  @@index([riderId])
+  @@index([status])
+  @@index([mobile])
+  @@map("customers")
+}
+
+model Subscription {
+  id            String             @id @default(uuid()) @db.Uuid
+  customerId    String             @map("customer_id") @db.Uuid
+  planId        String             @map("plan_id") @db.Uuid
+  product       ProductKind
+  durationDays  Int                @map("duration_days")
+  bottlesPerDay Int                @map("bottles_per_day")
+  amount        Decimal            @db.Decimal(10, 2)
+  startDate     DateTime           @map("start_date") @db.Date
+  endDate       DateTime           @map("end_date") @db.Date
+  status        SubscriptionStatus @default(active)
+  pausedDays    Int                @default(0) @map("paused_days")
+  createdById   String?            @map("created_by") @db.Uuid
+  createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  customer   Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  plan       Plan                @relation(fields: [planId], references: [id], onDelete: Restrict)
+  createdBy  User?               @relation("SubscriptionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  pauses     SubscriptionPause[]
+  payments   Payment[]
+  deliveries Delivery[]
+
+  @@index([customerId])
+  @@index([status])
+  @@index([endDate])
+  @@map("subscriptions")
+}
+
+/// resumedOn == null means the subscription is paused right now.
+model SubscriptionPause {
+  id             String    @id @default(uuid()) @db.Uuid
+  subscriptionId String    @map("subscription_id") @db.Uuid
+  pausedFrom     DateTime  @map("paused_from") @db.Date
+  resumedOn      DateTime? @map("resumed_on") @db.Date
+  pausedDays     Int?      @map("paused_days")
+  reason         String?
+  pausedById     String?   @map("paused_by") @db.Uuid
+  resumedById    String?   @map("resumed_by") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  pausedBy     User?        @relation("PauseBy", fields: [pausedById], references: [id], onDelete: SetNull)
+  resumedBy    User?        @relation("ResumeBy", fields: [resumedById], references: [id], onDelete: SetNull)
+
+  @@index([subscriptionId])
+  @@map("subscription_pauses")
+}
+
+model Payment {
+  id             String        @id @default(uuid()) @db.Uuid
+  customerId     String        @map("customer_id") @db.Uuid
+  subscriptionId String?       @map("subscription_id") @db.Uuid
+  amount         Decimal       @db.Decimal(10, 2)
+  mode           PaymentMode   @default(cash)
+  status         PaymentStatus @default(pending)
+  paidAt         DateTime?     @map("paid_at") @db.Timestamptz(6)
+  collectedById  String?       @map("collected_by") @db.Uuid
+  notes          String?
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  customer     Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  collectedBy  User?         @relation("PaymentCollectedBy", fields: [collectedById], references: [id], onDelete: SetNull)
+
+  @@index([customerId])
+  @@index([status])
+  @@index([paidAt])
+  @@index([collectedById])
+  @@map("payments")
+}
+
+model Delivery {
+  id             String          @id @default(uuid()) @db.Uuid
+  customerId     String          @map("customer_id") @db.Uuid
+  subscriptionId String?         @map("subscription_id") @db.Uuid
+  riderId        String          @map("rider_id") @db.Uuid
+  deliveryDate   DateTime        @map("delivery_date") @db.Date
+  product        DeliveryProduct
+  qty            Int
+  status         DeliveryStatus  @default(pending)
+  sequence       Int?
+  deliveredAt    DateTime?       @map("delivered_at") @db.Timestamptz(6)
+  latitude       Decimal?        @db.Decimal(10, 7)
+  longitude      Decimal?        @db.Decimal(10, 7)
+  remarks        String?
+  updatedById    String?         @map("updated_by") @db.Uuid
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  customer     Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  rider        User          @relation("DeliveryRider", fields: [riderId], references: [id], onDelete: Restrict)
+  updatedBy    User?         @relation("DeliveryUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([customerId, deliveryDate])
+  @@index([riderId, deliveryDate])
+  @@index([deliveryDate])
+  @@index([status])
+  @@map("deliveries")
+}
+
+model Lead {
+  id                  String     @id @default(uuid()) @db.Uuid
+  fullName            String     @map("full_name")
+  mobile              String
+  area                String?
+  city                String?
+  planId              String?    @map("plan_id") @db.Uuid
+  planText            String?    @map("plan_text")
+  notes               String?
+  status              LeadStatus @default(new)
+  source              String     @default("website")
+  convertedCustomerId String?    @map("converted_customer_id") @db.Uuid
+  createdAt           DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  plan              Plan?     @relation(fields: [planId], references: [id], onDelete: SetNull)
+  convertedCustomer Customer? @relation(fields: [convertedCustomerId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([mobile])
+  @@map("leads")
+}

@@ -1,0 +1,36 @@
+node_modules/
+dist/
+build/
+coverage/
+
+# Secrets — never commit a real .env
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+
+# Backups produced by scripts/backup.sh
+backups/
+*.dump
+*.sql.gz
+
+# React Native / Android
+rider-app/android/app/build/
+rider-app/android/build/
+rider-app/android/.gradle/
+rider-app/android/local.properties
+rider-app/android/app/google-services.json
+rider-app/android/app/*.keystore
+*.apk
+*.aab
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
