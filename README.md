@@ -16,18 +16,21 @@ DEPLOYMENT.md   how to deploy, either on your own server or on Render
 
 ## Quick start (local)
 
-Needs Node 20+ (Node 22+ for the rider app) and a PostgreSQL 16+ database.
+Needs Node 20+ (Node 22+ for the rider app). No PostgreSQL install required —
+`npm run db:dev` runs one for you. Full walkthrough in [TESTING.md](TESTING.md).
 
 ```bash
 # 1. API
 cd backend
-cp .env.example .env          # set DATABASE_URL and JWT_SECRET
 npm install
-npx prisma migrate deploy     # creates every table from the repo
+npm run db:dev                # local PostgreSQL on port 55432; leave it running
+# in a second terminal:
+cp .env.example .env          # set JWT_SECRET (DATABASE_URL already points at db:dev)
+npm run migrate:deploy        # creates every table from the repo
 npm run seed                  # plans, an admin, a supervisor, 2 riders, 12 customers
 npm run dev                   # http://localhost:4000
 
-# 2. Admin dashboard
+# 2. Admin dashboard (third terminal)
 cd ../admin-web
 npm install
 echo "VITE_API_BASE_URL=http://localhost:4000" > .env
@@ -80,14 +83,17 @@ set of bottles per customer per day.
 
 ## Tests
 
+See [TESTING.md](TESTING.md) for the full walkthrough, including what to click
+through in the dashboard and how to exercise the rider app's offline queue.
+
 ```bash
 cd backend
 npm test                 # 83 unit tests, no database needed
 npm run typecheck        # includes the test sources
 
-# Integration tests against a real PostgreSQL. The target database is
+# 54 integration tests against a real PostgreSQL. The target database is
 # TRUNCATED and re-seeded, so point it at a throwaway one.
-TEST_DATABASE_URL=postgresql://user:pass@localhost:5432/daj_test npm run test:integration
+TEST_DATABASE_URL=postgresql://daj:daj_dev_password@127.0.0.1:55432/daj?schema=public npm run test:integration
 ```
 
 The unit tests cover pricing, combo alternation, pause extension, route

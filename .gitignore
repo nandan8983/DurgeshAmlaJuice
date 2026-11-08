@@ -13,6 +13,9 @@ coverage/
 *.log
 npm-debug.log*
 
+# Local development database created by backend/scripts/dev-db.mjs
+backend/.dev-db/
+
 # Backups produced by scripts/backup.sh
 backups/
 *.dump

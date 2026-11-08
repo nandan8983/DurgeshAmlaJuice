@@ -6,6 +6,10 @@
  * Idempotent — safe to re-run. Passwords come from env or fall back to the
  * documented development defaults.
  */
+// Prisma's CLI loads .env by itself, but this script is run by tsx, which does
+// not — without this, `npm run seed` fails with "Environment variable not
+// found: DATABASE_URL".
+import 'dotenv/config';
 import bcrypt from 'bcryptjs';
 import { PrismaClient, type ProductKind } from '@prisma/client';
 import { addDays, today, toUtcDate } from '../src/domain/dates';
