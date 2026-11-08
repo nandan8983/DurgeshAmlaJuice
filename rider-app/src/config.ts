@@ -8,12 +8,19 @@
 import { Platform } from 'react-native';
 
 /**
- * 10.0.2.2 is how the Android emulator reaches the host machine's localhost.
- * Replace with your deployed URL, e.g. https://api.durgeshamlajuice.in
+ * Debug builds talk to the machine running Metro — 10.0.2.2 is how the Android
+ * emulator reaches the host's localhost. Release builds use the deployed API.
+ *
+ * Change PRODUCTION_API_BASE_URL when the API moves (a custom domain, or off
+ * Render onto the owner's own server behind Cloudflare Tunnel). A rider can
+ * also override it on the login screen without a rebuild, which is what to do
+ * for a one-off handset or while testing.
  */
+const PRODUCTION_API_BASE_URL = 'https://daj-api.onrender.com';
+
 export const DEFAULT_API_BASE_URL = __DEV__
   ? Platform.select({ android: 'http://10.0.2.2:4000', default: 'http://localhost:4000' })!
-  : 'https://api.durgeshamlajuice.in';
+  : PRODUCTION_API_BASE_URL;
 
 /** How long cached route/customer data is considered usable while offline. */
 export const OFFLINE_CACHE_TTL_MS = 36 * 60 * 60 * 1000;
